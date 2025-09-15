@@ -7,6 +7,7 @@ import sys
 import os
 import random
 import math
+import io # New: import the io module for in-memory file-like objects
 
 # --- Helper functions for database connection and data generation ---
 def connect_db():
@@ -42,7 +43,7 @@ def create_monolithic_table(conn):
     cur.close()
     print("✓ Monolithic base table created")
 
-def generate_viewing_events_generate_series(conn, num_days=90, events_per_day=50_000):
+def generate_viewing_events_generate_series(conn, num_days=90, events_per_day=200_000):
     """
     Generates realistic viewing events using SQL's generate_series.
     """
@@ -73,7 +74,7 @@ def generate_viewing_events_generate_series(conn, num_days=90, events_per_day=50
                 (ARRAY['480p','720p','1080p','4K'])[FLOOR(random()*4 + 1)] AS quality,
                 ROUND((random() * 49 + 1)::numeric, 2) AS bandwidth_mbps
             FROM generate_series('{start_date}'::timestamp, '{end_date}'::timestamp, interval '1 day') AS gs(day),
-                 generate_series(1, {events_per_day}) AS gs2
+                    generate_series(1, {events_per_day}) AS gs2
         """)
         conn.commit()
         print("✓ All events generated")
@@ -307,8 +308,8 @@ class StreamFlixPartitionManager:
 
     def migrate_data_to_partitioned(self, batch_size=50000):
         """
-        Migrates data from the monolithic table to the partitioned table in batches.
-        Automatically creates missing partitions if needed.
+        Migrates data from the monolithic table to the partitioned table in batches
+        using the much faster COPY command.
         """
         conn = psycopg2.connect(**self.conn_params)
         cur = conn.cursor()
@@ -323,50 +324,42 @@ class StreamFlixPartitionManager:
 
         try:
             while True:
-                cur.execute("""
-                    SELECT * FROM viewing_events
-                    WHERE event_id > %s
-                    ORDER BY event_id ASC
-                    LIMIT %s;
-                """, (last_migrated_id, batch_size))
+                # Use a server-side cursor for memory efficiency with large result sets
+                with conn.cursor('server_cursor') as fetch_cur:
+                    fetch_cur.execute("""
+                        SELECT 
+                            event_id, user_id, content_id, event_timestamp, event_type,
+                            watch_duration_seconds, device_type, country_code, quality,
+                            bandwidth_mbps, created_at
+                        FROM viewing_events
+                        WHERE event_id > %s
+                        ORDER BY event_id ASC
+                        LIMIT %s;
+                    """, (last_migrated_id, batch_size))
+                    
+                    batch_data = fetch_cur.fetchall()
                 
-                batch_data = cur.fetchall()
                 if not batch_data:
                     print("\nAll data has been migrated.")
                     break
                 
-                # Proactively create any missing partitions for the current batch
+                # Format data for COPY command
+                data_stream = io.StringIO()
                 for row in batch_data:
-                    event_timestamp = row[3]  # event_timestamp is the 4th column (index 3)
-                    partition_date = event_timestamp.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-                    partition_name = f"viewing_events_{partition_date.strftime('%Y_%m')}"
-                    
-                    with conn.cursor() as check_cur:
-                        check_cur.execute(f"SELECT to_regclass('{partition_name}');")
-                        if check_cur.fetchone()[0] is None:
-                            print(f"\nMissing partition for {partition_date.strftime('%Y-%m')}. Creating it now...")
-                            start_of_month = partition_date
-                            end_of_month = start_of_month + relativedelta(months=1)
-                            
-                            check_cur.execute(f"""
-                                CREATE TABLE {partition_name} PARTITION OF viewing_events_partitioned
-                                FOR VALUES FROM ('{start_of_month.isoformat()}') TO ('{end_of_month.isoformat()}');
-                            """)
-                            conn.commit()
-                            print(f"✓ Partition {partition_name} created successfully.")
+                    # Convert row to a tab-separated string, handling None values for NULL
+                    # and converting timestamps to the correct format for COPY.
+                    row_str = '\t'.join(
+                        str(col) if col is not None else '' 
+                        for col in row
+                    )
+                    data_stream.write(row_str + '\n')
+                data_stream.seek(0) # Rewind the stream to the beginning
 
-                # Insert the batch data
-                with conn.cursor() as insert_cur:
-                    insert_query = """
-                        INSERT INTO viewing_events_partitioned (
-                            event_id, user_id, content_id, event_timestamp, event_type,
-                            watch_duration_seconds, device_type, country_code, quality,
-                            bandwidth_mbps, created_at
-                        )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                    """
-                    insert_cur.executemany(insert_query, batch_data)
-                
+                # Execute the COPY command to insert the batch
+                cur.copy_expert(
+                    "COPY viewing_events_partitioned FROM STDIN WITH (FORMAT TEXT)", 
+                    data_stream
+                )
                 conn.commit()
 
                 last_migrated_id = batch_data[-1][0]
@@ -516,7 +509,7 @@ if __name__ == "__main__":
     # Connect and create/populate the original monolithic table
     conn = connect_db()
     create_monolithic_table(conn)
-    generate_viewing_events_generate_series(conn, num_days=60, events_per_day=10_000)
+    generate_viewing_events_generate_series(conn, num_days=90, events_per_day=200_000)
     conn.close()
 
     # Instantiate the partition manager
@@ -555,15 +548,15 @@ if __name__ == "__main__":
             monolithic_time_str = f"{data['monolithic_time']:.4f} seconds"
             partitioned_time_str = f"{data['partitioned_time']:.4f} seconds" if data['partitioned_time'] != float('inf') else "N/A (Partition not found)"
             
-            print(f"  - Monolithic Table Time (DELETE): {monolithic_time_str}")
-            print(f"  - Partitioned Table Time (DROP): {partitioned_time_str}")
-            print(f"  - Performance Improvement: {data['improvement_percent']}%")
+            print(f"  - Monolithic Table Time (DELETE): {monolithic_time_str}")
+            print(f"  - Partitioned Table Time (DROP): {partitioned_time_str}")
+            print(f"  - Performance Improvement: {data['improvement_percent']}%")
         else:
             print(f"\nQuery: {query_name.replace('_', ' ').title()}")
-            print(f"  - Average Time (Monolithic): {data['monolithic_avg_time']:.4f} seconds")
-            print(f"  - Average Time (Partitioned):  {data['partitioned_avg_time']:.4f} seconds")
-            print(f"  - Performance Improvement: {data['improvement_percent']}%")
-            print(f"  - Timing Range Before (Min/Max): {data['monolithic_min_time']:.4f} / {data['monolithic_max_time']:.4f} seconds")
-            print(f"  - Timing Range After (Min/Max):  {data['partitioned_min_time']:.4f} / {data['partitioned_max_time']:.4f} seconds")
+            print(f"  - Average Time (Monolithic): {data['monolithic_avg_time']:.4f} seconds")
+            print(f"  - Average Time (Partitioned):  {data['partitioned_avg_time']:.4f} seconds")
+            print(f"  - Performance Improvement: {data['improvement_percent']}%")
+            print(f"  - Timing Range Before (Min/Max): {data['monolithic_min_time']:.4f} / {data['monolithic_max_time']:.4f} seconds")
+            print(f"  - Timing Range After (Min/Max):  {data['partitioned_min_time']:.4f} / {data['partitioned_max_time']:.4f} seconds")
     
     print("\nNote: The `DROP TABLE` operation on a partitioned table is nearly instantaneous, showcasing the immense benefit of this strategy for data archival and deletion.")
