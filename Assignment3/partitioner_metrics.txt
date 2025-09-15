@@ -1,0 +1,46 @@
+
+--- Performance Comparison Report (Partitioned vs. Monolithic) ---
+
+Query: Daily Active Users
+   - Average Time (Monolithic): 0.6644 seconds
+   - Average Time (Partitioned):  0.4846 seconds
+   - Performance Improvement: 27.07%
+   - Timing Range Before (Min/Max): 0.6498 / 0.6796 seconds
+   - Timing Range After (Min/Max):  0.4778 / 0.5018 seconds
+
+Query: Top 10 Content Last 24H
+   - Average Time (Monolithic): 0.1381 seconds
+   - Average Time (Partitioned):  0.0774 seconds
+   - Performance Improvement: 43.96%
+   - Timing Range Before (Min/Max): 0.1359 / 0.1417 seconds
+   - Timing Range After (Min/Max):  0.0751 / 0.0791 seconds
+
+Query: Device Usage Last Month
+   - Average Time (Monolithic): 0.2254 seconds
+   - Average Time (Partitioned):  0.2291 seconds
+   - Performance Improvement: -1.67%
+   - Timing Range Before (Min/Max): 0.2161 / 0.2343 seconds
+   - Timing Range After (Min/Max):  0.2075 / 0.2413 seconds
+
+Query: Content Performance Last 30 Days
+   - Average Time (Monolithic): 0.1648 seconds
+   - Average Time (Partitioned):  0.1807 seconds
+   - Performance Improvement: -9.64%
+   - Timing Range Before (Min/Max): 0.1588 / 0.1733 seconds
+   - Timing Range After (Min/Max):  0.1758 / 0.1883 seconds
+
+Query: Regional Analytics Last 30 Days
+   - Average Time (Monolithic): 0.2234 seconds
+   - Average Time (Partitioned):  0.2225 seconds
+   - Performance Improvement: 0.40%
+   - Timing Range Before (Min/Max): 0.2152 / 0.2312 seconds
+   - Timing Range After (Min/Max):  0.1954 / 0.2490 seconds
+
+Query: Most Engaged Users Last 7 Days
+   - Average Time (Monolithic): 0.2342 seconds
+   - Average Time (Partitioned):  0.1843 seconds
+   - Performance Improvement: 21.34%
+   - Timing Range Before (Min/Max): 0.2285 / 0.2437 seconds
+   - Timing Range After (Min/Max):  0.1774 / 0.1944 seconds
+
+

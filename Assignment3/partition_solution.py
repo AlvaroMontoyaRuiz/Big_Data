@@ -7,17 +7,22 @@ import sys
 import os
 import random
 import math
-import io # New: import the io module for in-memory file-like objects
+import io
 
-# --- Helper functions for database connection and data generation ---
+NUM_DAYS = 30
+EVENTS_PER_DAY = 100000
+CONN_PARAMS = {
+    "host": "localhost",
+    "database": "streamflix",
+    "user": "student",
+    "password": "student"
+}
+
+
+# --- Database & Data Generation Functions ---
 def connect_db():
     """Establishes a connection to the PostgreSQL database."""
-    return psycopg2.connect(
-        host="localhost",
-        database="streamflix",
-        user="student",
-        password="student"
-    )
+    return psycopg2.connect(**CONN_PARAMS)
 
 def create_monolithic_table(conn):
     """Creates a base table for viewing events, dropping it if it already exists."""
@@ -41,7 +46,7 @@ def create_monolithic_table(conn):
     """)
     conn.commit()
     cur.close()
-    print("✓ Monolithic base table created")
+    print("Monolithic base table created")
 
 def generate_viewing_events_generate_series(conn, num_days=90, events_per_day=200_000):
     """
@@ -74,10 +79,10 @@ def generate_viewing_events_generate_series(conn, num_days=90, events_per_day=20
                 (ARRAY['480p','720p','1080p','4K'])[FLOOR(random()*4 + 1)] AS quality,
                 ROUND((random() * 49 + 1)::numeric, 2) AS bandwidth_mbps
             FROM generate_series('{start_date}'::timestamp, '{end_date}'::timestamp, interval '1 day') AS gs(day),
-                    generate_series(1, {events_per_day}) AS gs2
+                 generate_series(1, {events_per_day}) AS gs2
         """)
         conn.commit()
-        print("✓ All events generated")
+        print("All events generated")
     except psycopg2.Error as e:
         print(f"Error generating data: {e}", file=sys.stderr)
         conn.rollback()
@@ -110,7 +115,7 @@ def create_partitioned_table(conn):
     """)
     conn.commit()
     cur.close()
-    print("✓ Partitioned table 'viewing_events_partitioned' created")
+    print("Partitioned table 'viewing_events_partitioned' created")
 
 # --- Query functions ---
 def get_daily_active_users_query(table_name, days=7):
@@ -178,7 +183,6 @@ def get_user_engagement_query(table_name, days=7):
 def test_query_performance(conn, query, iterations=5):
     """
     Test query performance with a number of iterations.
-    Returns average, min, and max execution times.
     """
     cursor = conn.cursor()
     times = []
@@ -201,7 +205,7 @@ def test_query_performance(conn, query, iterations=5):
         'max_time': max(times)
     }
 
-# --- Python class for automated partition management ---
+# Partition class
 class StreamFlixPartitionManager:
     """Automated partition management for StreamFlix viewing events."""
 
@@ -295,7 +299,7 @@ class StreamFlixPartitionManager:
                 cur.execute(f"CREATE INDEX idx_{partition_name}_ts_dt ON {partition_name} (event_timestamp DESC, device_type);")
 
                 conn.commit()
-                print(f"✓ Partition {partition_name} created successfully.")
+                print(f"Partition {partition_name} created successfully.")
                 current_date = end_of_month
 
         except psycopg2.Error as e:
@@ -309,7 +313,6 @@ class StreamFlixPartitionManager:
     def migrate_data_to_partitioned(self, batch_size=50000):
         """
         Migrates data from the monolithic table to the partitioned table in batches
-        using the much faster COPY command.
         """
         conn = psycopg2.connect(**self.conn_params)
         cur = conn.cursor()
@@ -376,11 +379,11 @@ class StreamFlixPartitionManager:
             partitioned_count = cur.fetchone()[0]
 
             if partitioned_count == original_count:
-                print("\n✓ Data migration complete and integrity verified.")
+                print("\n Data migration complete and integrity verified.")
                 if os.path.exists(self.log_file):
                     os.remove(self.log_file)
             else:
-                print(f"\n⚠️ WARNING: Data count mismatch. Original: {original_count}, Partitioned: {partitioned_count}")
+                print(f"\n Data count mismatch. Original: {original_count}, Partitioned: {partitioned_count}")
 
         except psycopg2.Error as e:
             conn.rollback()
@@ -509,7 +512,7 @@ if __name__ == "__main__":
     # Connect and create/populate the original monolithic table
     conn = connect_db()
     create_monolithic_table(conn)
-    generate_viewing_events_generate_series(conn, num_days=90, events_per_day=200_000)
+    generate_viewing_events_generate_series(conn, NUM_DAYS, EVENTS_PER_DAY)
     conn.close()
 
     # Instantiate the partition manager
@@ -548,15 +551,15 @@ if __name__ == "__main__":
             monolithic_time_str = f"{data['monolithic_time']:.4f} seconds"
             partitioned_time_str = f"{data['partitioned_time']:.4f} seconds" if data['partitioned_time'] != float('inf') else "N/A (Partition not found)"
             
-            print(f"  - Monolithic Table Time (DELETE): {monolithic_time_str}")
-            print(f"  - Partitioned Table Time (DROP): {partitioned_time_str}")
-            print(f"  - Performance Improvement: {data['improvement_percent']}%")
+            print(f"   - Monolithic Table Time (DELETE): {monolithic_time_str}")
+            print(f"   - Partitioned Table Time (DROP): {partitioned_time_str}")
+            print(f"   - Performance Improvement: {data['improvement_percent']}%")
         else:
             print(f"\nQuery: {query_name.replace('_', ' ').title()}")
-            print(f"  - Average Time (Monolithic): {data['monolithic_avg_time']:.4f} seconds")
-            print(f"  - Average Time (Partitioned):  {data['partitioned_avg_time']:.4f} seconds")
-            print(f"  - Performance Improvement: {data['improvement_percent']}%")
-            print(f"  - Timing Range Before (Min/Max): {data['monolithic_min_time']:.4f} / {data['monolithic_max_time']:.4f} seconds")
-            print(f"  - Timing Range After (Min/Max):  {data['partitioned_min_time']:.4f} / {data['partitioned_max_time']:.4f} seconds")
+            print(f"   - Average Time (Monolithic): {data['monolithic_avg_time']:.4f} seconds")
+            print(f"   - Average Time (Partitioned):  {data['partitioned_avg_time']:.4f} seconds")
+            print(f"   - Performance Improvement: {data['improvement_percent']}%")
+            print(f"   - Timing Range Before (Min/Max): {data['monolithic_min_time']:.4f} / {data['monolithic_max_time']:.4f} seconds")
+            print(f"   - Timing Range After (Min/Max):  {data['partitioned_min_time']:.4f} / {data['partitioned_max_time']:.4f} seconds")
     
     print("\nNote: The `DROP TABLE` operation on a partitioned table is nearly instantaneous, showcasing the immense benefit of this strategy for data archival and deletion.")

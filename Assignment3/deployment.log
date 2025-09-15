@@ -1,0 +1,113 @@
+2025-09-15 14:12:16,650 - INFO - --- Creating table 'viewing_events_base' ---
+2025-09-15 14:12:16,701 - INFO - Table 'viewing_events_base' created
+2025-09-15 14:12:16,702 - INFO - Generating 3000000 events into 'viewing_events_base'...
+2025-09-15 14:12:24,108 - INFO - Data generation complete
+2025-09-15 14:12:24,108 - INFO - Testing query: daily_active_users on base table...
+2025-09-15 14:12:28,287 - INFO - Testing query: top_10_content_last_24h on base table...
+2025-09-15 14:12:29,231 - INFO - Testing query: device_usage_last_month on base table...
+2025-09-15 14:12:30,654 - INFO - Testing query: content_performance_last_30_days on base table...
+2025-09-15 14:12:32,248 - INFO - Testing query: regional_analytics_last_30_days on base table...
+2025-09-15 14:12:33,633 - INFO - Testing query: most_engaged_users_last_7_days on base table...
+2025-09-15 14:12:35,157 - INFO - --- Creating table 'viewing_events_indexed' ---
+2025-09-15 14:12:35,163 - INFO - Table 'viewing_events_indexed' created
+2025-09-15 14:12:35,163 - INFO - 
+Migrating data from 'viewing_events_base' to 'viewing_events_indexed'...
+2025-09-15 14:12:38,504 - INFO - Data migration complete.
+2025-09-15 14:12:38,505 - INFO - Creating monolithic indexes...
+2025-09-15 14:12:38,706 - INFO - Monolithic indexes created
+2025-09-15 14:12:38,706 - INFO - Testing query: daily_active_users on indexed table...
+2025-09-15 14:12:42,379 - INFO - Testing query: top_10_content_last_24h on indexed table...
+2025-09-15 14:12:43,316 - INFO - Testing query: device_usage_last_month on indexed table...
+2025-09-15 14:12:44,757 - INFO - Testing query: content_performance_last_30_days on indexed table...
+2025-09-15 14:12:45,815 - INFO - Testing query: regional_analytics_last_30_days on indexed table...
+2025-09-15 14:12:47,239 - INFO - Testing query: most_engaged_users_last_7_days on indexed table...
+2025-09-15 14:12:48,832 - INFO - 
+================================================================================
+2025-09-15 14:12:48,832 - INFO -                          PRODUCTION DEPLOYMENT: STARTING NOW
+2025-09-15 14:12:48,832 - INFO - ================================================================================
+2025-09-15 14:12:48,833 - INFO - Step 0: Cleaning up previous deployment artifacts...
+2025-09-15 14:12:49,023 - INFO - Cleanup complete.
+2025-09-15 14:12:49,023 - INFO - Step 1: Checking prerequisites...
+2025-09-15 14:12:49,026 - INFO - Required space for temp table: 86.96 GB (approx)
+2025-09-15 14:12:49,026 - INFO - Prerequisites check passed.
+2025-09-15 14:12:49,026 - INFO - Step 2: Creating new partitioned table and structures.
+2025-09-15 14:12:49,026 - INFO - 
+--- Implementing Hybrid Optimization Strategy ---
+2025-09-15 14:12:49,027 - INFO - Creating partitioned table structure 'viewing_events_temp'...
+2025-09-15 14:12:49,030 - INFO - Partitioned table structure created.
+2025-09-15 14:12:49,110 - INFO - Creating 3 monthly partitions...
+2025-09-15 14:12:49,112 - INFO -    - Partition 'viewing_events_temp_2025_08' created.
+2025-09-15 14:12:49,114 - INFO -    - Partition 'viewing_events_temp_2025_09' created.
+2025-09-15 14:12:49,115 - INFO -    - Partition 'viewing_events_temp_2025_10' created.
+2025-09-15 14:12:49,116 - INFO - All partitions created.
+2025-09-15 14:12:49,116 - INFO - 
+Creating partition-aware indexes...
+2025-09-15 14:12:49,118 - INFO -    - Creating indexes on 'viewing_events_temp_2025_08'
+2025-09-15 14:12:49,120 - INFO -    - Creating indexes on 'viewing_events_temp_2025_09'
+2025-09-15 14:12:49,122 - INFO -    - Creating indexes on 'viewing_events_temp_2025_10'
+2025-09-15 14:12:49,126 - INFO - 
+Creating Materialized View for daily active users...
+2025-09-15 14:12:49,130 - INFO - Materialized View 'mv_daily_active_users' created.
+2025-09-15 14:12:49,130 - INFO - 
+Creating a function to refresh the materialized view...
+2025-09-15 14:12:49,133 - INFO - Refresh function created.
+2025-09-15 14:12:49,133 - INFO - Step 3: Migrating data with minimal downtime.
+2025-09-15 14:12:49,133 - INFO - 
+Migrating data from 'viewing_events_indexed' to 'viewing_events_temp'...
+2025-09-15 14:13:08,284 - INFO - Data migration complete.
+2025-09-15 14:13:08,456 - INFO - Data integrity verified. Proceeding with final switchover.
+2025-09-15 14:13:08,456 - INFO - Step 4: Atomic switchover with transaction block.
+2025-09-15 14:13:09,444 - INFO - Switchover successful. The new table is now active.
+2025-09-15 14:13:09,444 - INFO - Step 5: Finalizing and cleaning up.
+2025-09-15 14:13:09,792 - INFO - Deployment complete.
+2025-09-15 14:13:09,792 - INFO - Testing query: daily_active_users on hybrid (production) table...
+2025-09-15 14:13:12,485 - INFO - Testing query: top_10_content_last_24h on hybrid (production) table...
+2025-09-15 14:13:12,693 - INFO - Testing query: device_usage_last_month on hybrid (production) table...
+2025-09-15 14:13:14,211 - INFO - Testing query: content_performance_last_30_days on hybrid (production) table...
+2025-09-15 14:13:15,366 - INFO - Testing query: regional_analytics_last_30_days on hybrid (production) table...
+2025-09-15 14:13:16,912 - INFO - Testing query: most_engaged_users_last_7_days on hybrid (production) table...
+2025-09-15 14:13:18,103 - INFO - 
+================================================================================
+2025-09-15 14:13:18,103 - INFO -                          TEST HARNESS: VERIFYING SOLUTION
+2025-09-15 14:13:18,104 - INFO - ================================================================================
+2025-09-15 14:13:18,104 - INFO - 
+[Test 1] Verifying indexes exist and are used...
+2025-09-15 14:13:18,106 - ERROR -  FAILED: No partition-aware indexes found.
+2025-09-15 14:13:18,108 - ERROR -  FAILED: EXPLAIN plan does not indicate efficient Index scan type.
+2025-09-15 14:13:18,108 - INFO - 
+[Test 2] Verifying partition structure...
+2025-09-15 14:13:18,109 - INFO - PASSED: Found 3 partitions.
+2025-09-15 14:13:18,109 - INFO - 
+[Test 3] Verifying performance improvements...
+2025-09-15 14:13:18,109 - INFO -    - Query: daily_active_users
+2025-09-15 14:13:18,109 - INFO -    - Base (no optimization): 0.6878s
+2025-09-15 14:13:18,109 - INFO -    - Hybrid Solution:        0.4473s
+2025-09-15 14:13:18,109 - INFO -    - Speedup:                1.54x
+2025-09-15 14:13:18,109 - INFO -    - Query: top_10_content_last_24h
+2025-09-15 14:13:18,109 - INFO -    - Base (no optimization): 0.1542s
+2025-09-15 14:13:18,109 - INFO -    - Hybrid Solution:        0.0344s
+2025-09-15 14:13:18,110 - INFO -    - Speedup:                4.49x
+2025-09-15 14:13:18,110 - INFO -    - Query: device_usage_last_month
+2025-09-15 14:13:18,110 - INFO -    - Base (no optimization): 0.2375s
+2025-09-15 14:13:18,110 - INFO -    - Hybrid Solution:        0.2518s
+2025-09-15 14:13:18,110 - INFO -    - Speedup:                0.94x
+2025-09-15 14:13:18,110 - INFO -    - Query: content_performance_last_30_days
+2025-09-15 14:13:18,110 - INFO -    - Base (no optimization): 0.2641s
+2025-09-15 14:13:18,110 - INFO -    - Hybrid Solution:        0.1891s
+2025-09-15 14:13:18,110 - INFO -    - Speedup:                1.40x
+2025-09-15 14:13:18,110 - INFO -    - Query: regional_analytics_last_30_days
+2025-09-15 14:13:18,110 - INFO -    - Base (no optimization): 0.2306s
+2025-09-15 14:13:18,111 - INFO -    - Hybrid Solution:        0.2613s
+2025-09-15 14:13:18,111 - INFO -    - Speedup:                0.88x
+2025-09-15 14:13:18,111 - INFO -    - Query: most_engaged_users_last_7_days
+2025-09-15 14:13:18,111 - INFO -    - Base (no optimization): 0.2531s
+2025-09-15 14:13:18,111 - INFO -    - Hybrid Solution:        0.1917s
+2025-09-15 14:13:18,111 - INFO -    - Speedup:                1.32x
+2025-09-15 14:13:18,111 - INFO - 
+
+2025-09-15 14:13:18,111 - ERROR -  FAILED: Did not achieve >10x speedup. Current: 1.54x.
+2025-09-15 14:13:18,111 - INFO - 
+[Test 4] Verifying data integrity...
+2025-09-15 14:13:18,220 - INFO -  PASSED: Data counts match (3100000 rows). Integrity verified.
+2025-09-15 14:13:18,221 - INFO - 
+Database connection closed.

@@ -1,0 +1,330 @@
+
+
+--- Initial EXPLAIN ANALYZE Results (Before Indexing) ---
+
+Query: daily_active_users_last_7_days
+   ('GroupAggregate  (cost=77409.00..79379.24 rows=200 width=12) (actual time=778.768..876.886 rows=8 loops=1)',)
+   ('  Output: ((event_timestamp)::date), count(DISTINCT user_id)',)
+   ('  Group Key: ((viewing_events.event_timestamp)::date)',)
+   ('  Buffers: shared hit=12918 read=22865 dirtied=22889 written=22865, temp read=1770 written=1779',)
+   ('  ->  Sort  (cost=77409.00..78064.91 rows=262365 width=8) (actual time=764.661..816.972 rows=800000 loops=1)',)
+   ('        Output: ((event_timestamp)::date), user_id',)
+   ('        Sort Key: ((viewing_events.event_timestamp)::date), viewing_events.user_id',)
+   ('        Sort Method: external merge  Disk: 14160kB',)
+   ('        Buffers: shared hit=12918 read=22865 dirtied=22889 written=22865, temp read=1770 written=1779',)
+   ('        ->  Seq Scan on public.viewing_events  (cost=0.00..50207.06 rows=262365 width=8) (actual time=361.904..525.590 rows=800000 loops=1)',)
+   ('              Output: (event_timestamp)::date, user_id',)
+   ("              Filter: (viewing_events.event_timestamp >= (now() - '7 days'::interval))",)
+   ('              Rows Removed by Filter: 2300000',)
+   ('              Buffers: shared hit=12912 read=22865 dirtied=22889 written=22865',)
+   ('Planning:',)
+   ('  Buffers: shared hit=24 read=11 written=11',)
+   ('Planning Time: 0.152 ms',)
+   ('Execution Time: 878.845 ms',)
+
+Query: top_10_content_last_24h
+   ('Limit  (cost=43127.48..43127.51 rows=10 width=12) (actual time=163.070..166.314 rows=10 loops=1)',)
+   ('  Output: content_id, (count(*))',)
+   ('  Buffers: shared hit=13223 read=22568',)
+   ('  ->  Sort  (cost=43127.48..43127.98 rows=200 width=12) (actual time=163.069..166.312 rows=10 loops=1)',)
+   ('        Output: content_id, (count(*))',)
+   ('        Sort Key: (count(*)) DESC',)
+   ('        Sort Method: top-N heapsort  Memory: 25kB',)
+   ('        Buffers: shared hit=13223 read=22568',)
+   ('        ->  Finalize GroupAggregate  (cost=43072.49..43123.16 rows=200 width=12) (actual time=156.123..165.671 rows=10000 loops=1)',)
+   ('              Output: content_id, count(*)',)
+   ('              Group Key: viewing_events.content_id',)
+   ('              Buffers: shared hit=13223 read=22568',)
+   ('              ->  Gather Merge  (cost=43072.49..43119.16 rows=400 width=12) (actual time=156.118..162.768 rows=29621 loops=1)',)
+   ('                    Output: content_id, (PARTIAL count(*))',)
+   ('                    Workers Planned: 2',)
+   ('                    Workers Launched: 2',)
+   ('                    Buffers: shared hit=13223 read=22568',)
+   ('                    ->  Sort  (cost=42072.47..42072.97 rows=200 width=12) (actual time=147.233..147.584 rows=9874 loops=3)',)
+   ('                          Output: content_id, (PARTIAL count(*))',)
+   ('                          Sort Key: viewing_events.content_id',)
+   ('                          Sort Method: quicksort  Memory: 694kB',)
+   ('                          Buffers: shared hit=13223 read=22568',)
+   ('                          Worker 0:  actual time=143.026..143.383 rows=9863 loops=1',)
+   ('                            Sort Method: quicksort  Memory: 693kB',)
+   ('                            Buffers: shared hit=4332 read=7119',)
+   ('                          Worker 1:  actual time=143.026..143.381 rows=9860 loops=1',)
+   ('                            Sort Method: quicksort  Memory: 693kB',)
+   ('                            Buffers: shared hit=4275 read=7065',)
+   ('                          ->  Partial HashAggregate  (cost=42062.82..42064.82 rows=200 width=12) (actual time=145.165..145.970 rows=9874 loops=3)',)
+   ('                                Output: content_id, PARTIAL count(*)',)
+   ('                                Group Key: viewing_events.content_id',)
+   ('                                Batches: 1  Memory Usage: 1185kB',)
+   ('                                Buffers: shared hit=13209 read=22568',)
+   ('                                Worker 0:  actual time=140.885..141.690 rows=9863 loops=1',)
+   ('                                  Batches: 1  Memory Usage: 1185kB',)
+   ('                                  Buffers: shared hit=4325 read=7119',)
+   ('                                Worker 1:  actual time=140.892..141.697 rows=9860 loops=1',)
+   ('                                  Batches: 1  Memory Usage: 1185kB',)
+   ('                                  Buffers: shared hit=4268 read=7065',)
+   ('                                ->  Parallel Seq Scan on public.viewing_events  (cost=0.00..41516.23 rows=109319 width=4) (actual time=127.258..136.946 rows=66667 loops=3)',)
+   ('                                      Output: event_id, user_id, content_id, event_timestamp, event_type, watch_duration_seconds, device_type, country_code, quality, bandwidth_mbps, created_at',)
+   ("                                      Filter: (viewing_events.event_timestamp >= (now() - '1 day'::interval))",)
+   ('                                      Rows Removed by Filter: 966667',)
+   ('                                      Buffers: shared hit=13209 read=22568',)
+   ('                                      Worker 0:  actual time=123.104..132.797 rows=65786 loops=1',)
+   ('                                        Buffers: shared hit=4325 read=7119',)
+   ('                                      Worker 1:  actual time=122.883..132.484 rows=64222 loops=1',)
+   ('                                        Buffers: shared hit=4268 read=7065',)
+   ('Planning:',)
+   ('  Buffers: shared hit=10',)
+   ('Planning Time: 0.091 ms',)
+   ('Execution Time: 166.341 ms',)
+
+Query: device_usage_last_month
+   ('Sort  (cost=43130.80..43131.30 rows=200 width=126) (actual time=289.740..293.547 rows=4 loops=1)',)
+   ('  Output: device_type, (count(*))',)
+   ('  Sort Key: (count(*)) DESC',)
+   ('  Sort Method: quicksort  Memory: 25kB',)
+   ('  Buffers: shared hit=13312 read=22481 written=10',)
+   ('  ->  Finalize GroupAggregate  (cost=43072.49..43123.16 rows=200 width=126) (actual time=289.730..293.540 rows=4 loops=1)',)
+   ('        Output: device_type, count(*)',)
+   ('        Group Key: viewing_events.device_type',)
+   ('        Buffers: shared hit=13312 read=22481 written=10',)
+   ('        ->  Gather Merge  (cost=43072.49..43119.16 rows=400 width=126) (actual time=289.711..293.530 rows=12 loops=1)',)
+   ('              Output: device_type, (PARTIAL count(*))',)
+   ('              Workers Planned: 2',)
+   ('              Workers Launched: 2',)
+   ('              Buffers: shared hit=13312 read=22481 written=10',)
+   ('              ->  Sort  (cost=42072.47..42072.97 rows=200 width=126) (actual time=281.154..281.158 rows=4 loops=3)',)
+   ('                    Output: device_type, (PARTIAL count(*))',)
+   ('                    Sort Key: viewing_events.device_type',)
+   ('                    Sort Method: quicksort  Memory: 25kB',)
+   ('                    Buffers: shared hit=13312 read=22481 written=10',)
+   ('                    Worker 0:  actual time=276.967..276.969 rows=4 loops=1',)
+   ('                      Sort Method: quicksort  Memory: 25kB',)
+   ('                      Buffers: shared hit=4334 read=7072',)
+   ('                    Worker 1:  actual time=276.992..276.992 rows=4 loops=1',)
+   ('                      Sort Method: quicksort  Memory: 25kB',)
+   ('                      Buffers: shared hit=4328 read=7433',)
+   ('                    ->  Partial HashAggregate  (cost=42062.82..42064.82 rows=200 width=126) (actual time=281.127..281.128 rows=4 loops=3)',)
+   ('                          Output: device_type, PARTIAL count(*)',)
+   ('                          Group Key: viewing_events.device_type',)
+   ('                          Batches: 1  Memory Usage: 40kB',)
+   ('                          Buffers: shared hit=13296 read=22481 written=10',)
+   ('                          Worker 0:  actual time=276.942..276.944 rows=4 loops=1',)
+   ('                            Batches: 1  Memory Usage: 40kB',)
+   ('                            Buffers: shared hit=4326 read=7072',)
+   ('                          Worker 1:  actual time=276.952..276.953 rows=4 loops=1',)
+   ('                            Batches: 1  Memory Usage: 40kB',)
+   ('                            Buffers: shared hit=4320 read=7433',)
+   ('                          ->  Parallel Seq Scan on public.viewing_events  (cost=0.00..41516.23 rows=109319 width=118) (actual time=0.021..155.331 rows=1033333 loops=3)',)
+   ('                                Output: event_id, user_id, content_id, event_timestamp, event_type, watch_duration_seconds, device_type, country_code, quality, bandwidth_mbps, created_at',)
+   ("                                Filter: (viewing_events.event_timestamp >= (now() - '30 days'::interval))",)
+   ('                                Buffers: shared hit=13296 read=22481 written=10',)
+   ('                                Worker 0:  actual time=0.023..153.627 rows=987679 loops=1',)
+   ('                                  Buffers: shared hit=4326 read=7072',)
+   ('                                Worker 1:  actual time=0.025..153.145 rows=1018362 loops=1',)
+   ('                                  Buffers: shared hit=4320 read=7433',)
+   ('Planning:',)
+   ('  Buffers: shared hit=13',)
+   ('Planning Time: 0.081 ms',)
+   ('Execution Time: 293.591 ms',)
+
+Query: content_performance_last_30_days
+   ('Limit  (cost=43462.46..43462.48 rows=10 width=20) (actual time=256.370..257.919 rows=10 loops=1)',)
+   ("  Output: content_id, (count(*)), (sum(CASE WHEN ((event_type)::text = 'complete'::text) THEN 1 ELSE 0 END))",)
+   ('  Buffers: shared hit=13481 read=22376, temp read=2064 written=2074',)
+   ('  ->  Sort  (cost=43462.46..43462.96 rows=200 width=20) (actual time=256.369..257.917 rows=10 loops=1)',)
+   ("        Output: content_id, (count(*)), (sum(CASE WHEN ((event_type)::text = 'complete'::text) THEN 1 ELSE 0 END))",)
+   ('        Sort Key: (count(*)) DESC',)
+   ('        Sort Method: top-N heapsort  Memory: 25kB',)
+   ('        Buffers: shared hit=13481 read=22376, temp read=2064 written=2074',)
+   ('        ->  Finalize GroupAggregate  (cost=43391.30..43458.14 rows=200 width=20) (actual time=202.789..257.163 rows=10000 loops=1)',)
+   ("              Output: content_id, count(*), sum(CASE WHEN ((event_type)::text = 'complete'::text) THEN 1 ELSE 0 END)",)
+   ('              Group Key: viewing_events.content_id',)
+   ('              Buffers: shared hit=13481 read=22376, temp read=2064 written=2074',)
+   ('              ->  Gather Merge  (cost=43391.30..43453.14 rows=400 width=20) (actual time=202.597..253.662 rows=30000 loops=1)',)
+   ("                    Output: content_id, (PARTIAL count(*)), (PARTIAL sum(CASE WHEN ((event_type)::text = 'complete'::text) THEN 1 ELSE 0 END))",)
+   ('                    Workers Planned: 2',)
+   ('                    Workers Launched: 2',)
+   ('                    Buffers: shared hit=13481 read=22376, temp read=2064 written=2074',)
+   ('                    ->  Partial GroupAggregate  (cost=42391.28..42406.94 rows=200 width=20) (actual time=185.225..228.132 rows=10000 loops=3)',)
+   ("                          Output: content_id, PARTIAL count(*), PARTIAL sum(CASE WHEN ((event_type)::text = 'complete'::text) THEN 1 ELSE 0 END)",)
+   ('                          Group Key: viewing_events.content_id',)
+   ('                          Buffers: shared hit=13481 read=22376, temp read=2064 written=2074',)
+   ('                          Worker 0:  actual time=181.831..222.794 rows=10000 loops=1',)
+   ('                            Buffers: shared hit=4543 read=6706, temp read=646 written=649',)
+   ('                          Worker 1:  actual time=183.169..225.269 rows=10000 loops=1',)
+   ('                            Buffers: shared hit=5190 read=6661, temp read=681 written=684',)
+   ('                          ->  Sort  (cost=42391.28..42394.01 rows=1093 width=122) (actual time=184.814..201.772 rows=275945 loops=3)',)
+   ('                                Output: content_id, event_type',)
+   ('                                Sort Key: viewing_events.content_id',)
+   ('                                Sort Method: external merge  Disk: 5896kB',)
+   ('                                Buffers: shared hit=13481 read=22376, temp read=2064 written=2074',)
+   ('                                Worker 0:  actual time=181.440..197.421 rows=259044 loops=1',)
+   ('                                  Sort Method: external merge  Disk: 5168kB',)
+   ('                                  Buffers: shared hit=4543 read=6706, temp read=646 written=649',)
+   ('                                Worker 1:  actual time=182.762..199.174 rows=273302 loops=1',)
+   ('                                  Sort Method: external merge  Disk: 5448kB',)
+   ('                                  Buffers: shared hit=5190 read=6661, temp read=681 written=684',)
+   ('                                ->  Parallel Seq Scan on public.viewing_events  (cost=0.00..42336.12 rows=1093 width=122) (actual time=0.024..130.000 rows=275945 loops=3)',)
+   ('                                      Output: content_id, event_type',)
+   ("                                      Filter: (((viewing_events.event_type)::text = ANY ('{start,complete}'::text[])) AND (viewing_events.event_timestamp >= (now() - '30 days'::interval)))",)
+   ('                                      Rows Removed by Filter: 757388',)
+   ('                                      Buffers: shared hit=13407 read=22376',)
+   ('                                      Worker 0:  actual time=0.031..126.876 rows=259044 loops=1',)
+   ('                                        Buffers: shared hit=4506 read=6706',)
+   ('                                      Worker 1:  actual time=0.030..129.327 rows=273302 loops=1',)
+   ('                                        Buffers: shared hit=5153 read=6661',)
+   ('Planning:',)
+   ('  Buffers: shared hit=45 read=1',)
+   ('Planning Time: 0.143 ms',)
+   ('Execution Time: 258.765 ms',)
+
+Query: regional_analytics_last_30_days
+   ('Sort  (cost=43130.80..43131.30 rows=200 width=20) (actual time=297.900..302.544 rows=5 loops=1)',)
+   ('  Output: country_code, (count(*))',)
+   ('  Sort Key: (count(*)) DESC',)
+   ('  Sort Method: quicksort  Memory: 25kB',)
+   ('  Buffers: shared hit=13513 read=22280',)
+   ('  ->  Finalize GroupAggregate  (cost=43072.49..43123.16 rows=200 width=20) (actual time=297.892..302.539 rows=5 loops=1)',)
+   ('        Output: country_code, count(*)',)
+   ('        Group Key: viewing_events.country_code',)
+   ('        Buffers: shared hit=13513 read=22280',)
+   ('        ->  Gather Merge  (cost=43072.49..43119.16 rows=400 width=20) (actual time=297.886..302.533 rows=15 loops=1)',)
+   ('              Output: country_code, (PARTIAL count(*))',)
+   ('              Workers Planned: 2',)
+   ('              Workers Launched: 2',)
+   ('              Buffers: shared hit=13513 read=22280',)
+   ('              ->  Sort  (cost=42072.47..42072.97 rows=200 width=20) (actual time=289.633..289.634 rows=5 loops=3)',)
+   ('                    Output: country_code, (PARTIAL count(*))',)
+   ('                    Sort Key: viewing_events.country_code',)
+   ('                    Sort Method: quicksort  Memory: 25kB',)
+   ('                    Buffers: shared hit=13513 read=22280',)
+   ('                    Worker 0:  actual time=285.637..285.639 rows=5 loops=1',)
+   ('                      Sort Method: quicksort  Memory: 25kB',)
+   ('                      Buffers: shared hit=4423 read=7812',)
+   ('                    Worker 1:  actual time=285.600..285.601 rows=5 loops=1',)
+   ('                      Sort Method: quicksort  Memory: 25kB',)
+   ('                      Buffers: shared hit=4560 read=6911',)
+   ('                    ->  Partial HashAggregate  (cost=42062.82..42064.82 rows=200 width=20) (actual time=289.610..289.612 rows=5 loops=3)',)
+   ('                          Output: country_code, PARTIAL count(*)',)
+   ('                          Group Key: viewing_events.country_code',)
+   ('                          Batches: 1  Memory Usage: 40kB',)
+   ('                          Buffers: shared hit=13497 read=22280',)
+   ('                          Worker 0:  actual time=285.610..285.611 rows=5 loops=1',)
+   ('                            Batches: 1  Memory Usage: 40kB',)
+   ('                            Buffers: shared hit=4415 read=7812',)
+   ('                          Worker 1:  actual time=285.570..285.572 rows=5 loops=1',)
+   ('                            Batches: 1  Memory Usage: 40kB',)
+   ('                            Buffers: shared hit=4552 read=6911',)
+   ('                          ->  Parallel Seq Scan on public.viewing_events  (cost=0.00..41516.23 rows=109319 width=12) (actual time=0.023..160.515 rows=1033333 loops=3)',)
+   ('                                Output: event_id, user_id, content_id, event_timestamp, event_type, watch_duration_seconds, device_type, country_code, quality, bandwidth_mbps, created_at',)
+   ("                                Filter: (viewing_events.event_timestamp >= (now() - '30 days'::interval))",)
+   ('                                Buffers: shared hit=13497 read=22280',)
+   ('                                Worker 0:  actual time=0.033..158.562 rows=1059574 loops=1',)
+   ('                                  Buffers: shared hit=4415 read=7812',)
+   ('                                Worker 1:  actual time=0.024..158.411 rows=993275 loops=1',)
+   ('                                  Buffers: shared hit=4552 read=6911',)
+   ('Planning Time: 0.075 ms',)
+   ('Execution Time: 302.571 ms',)
+
+Query: most_engaged_users_last_7_days
+   ('Limit  (cost=43127.48..43127.51 rows=10 width=12) (actual time=309.997..313.717 rows=10 loops=1)',)
+   ('  Output: user_id, (sum(watch_duration_seconds))',)
+   ('  Buffers: shared hit=13607 read=22184, temp read=967 written=1175',)
+   ('  ->  Sort  (cost=43127.48..43127.98 rows=200 width=12) (actual time=309.996..313.714 rows=10 loops=1)',)
+   ('        Output: user_id, (sum(watch_duration_seconds))',)
+   ('        Sort Key: (sum(viewing_events.watch_duration_seconds)) DESC',)
+   ('        Sort Method: top-N heapsort  Memory: 25kB',)
+   ('        Buffers: shared hit=13607 read=22184, temp read=967 written=1175',)
+   ('        ->  Finalize GroupAggregate  (cost=43072.49..43123.16 rows=200 width=12) (actual time=244.623..307.102 rows=99444 loops=1)',)
+   ('              Output: user_id, sum(watch_duration_seconds)',)
+   ('              Group Key: viewing_events.user_id',)
+   ('              Buffers: shared hit=13607 read=22184, temp read=967 written=1175',)
+   ('              ->  Gather Merge  (cost=43072.49..43119.16 rows=400 width=12) (actual time=244.616..281.143 rows=257748 loops=1)',)
+   ('                    Output: user_id, (PARTIAL sum(watch_duration_seconds))',)
+   ('                    Workers Planned: 2',)
+   ('                    Workers Launched: 2',)
+   ('                    Buffers: shared hit=13607 read=22184, temp read=967 written=1175',)
+   ('                    ->  Sort  (cost=42072.47..42072.97 rows=200 width=12) (actual time=236.042..240.942 rows=85916 loops=3)',)
+   ('                          Output: user_id, (PARTIAL sum(watch_duration_seconds))',)
+   ('                          Sort Key: viewing_events.user_id',)
+   ('                          Sort Method: external merge  Disk: 2200kB',)
+   ('                          Buffers: shared hit=13607 read=22184, temp read=967 written=1175',)
+   ('                          Worker 0:  actual time=231.858..236.636 rows=85855 loops=1',)
+   ('                            Sort Method: external merge  Disk: 2192kB',)
+   ('                            Buffers: shared hit=4498 read=6519, temp read=321 written=392',)
+   ('                          Worker 1:  actual time=231.786..236.723 rows=85954 loops=1',)
+   ('                            Sort Method: external merge  Disk: 2200kB',)
+   ('                            Buffers: shared hit=4516 read=8160, temp read=323 written=391',)
+   ('                          ->  Partial HashAggregate  (cost=42062.82..42064.82 rows=200 width=12) (actual time=198.459..213.385 rows=85916 loops=3)',)
+   ('                                Output: user_id, PARTIAL sum(watch_duration_seconds)',)
+   ('                                Group Key: viewing_events.user_id',)
+   ('                                Batches: 5  Memory Usage: 8257kB  Disk Usage: 672kB',)
+   ('                                Buffers: shared hit=13593 read=22184, temp read=143 written=348',)
+   ('                                Worker 0:  actual time=194.355..209.327 rows=85855 loops=1',)
+   ('                                  Batches: 5  Memory Usage: 8257kB  Disk Usage: 664kB',)
+   ('                                  Buffers: shared hit=4491 read=6519, temp read=47 written=117',)
+   ('                                Worker 1:  actual time=194.519..209.371 rows=85954 loops=1',)
+   ('                                  Batches: 5  Memory Usage: 8257kB  Disk Usage: 672kB',)
+   ('                                  Buffers: shared hit=4509 read=8160, temp read=48 written=115',)
+   ('                                ->  Parallel Seq Scan on public.viewing_events  (cost=0.00..41516.23 rows=109319 width=8) (actual time=112.183..151.008 rows=266667 loops=3)',)
+   ('                                      Output: event_id, user_id, content_id, event_timestamp, event_type, watch_duration_seconds, device_type, country_code, quality, bandwidth_mbps, created_at',)
+   ("                                      Filter: (viewing_events.event_timestamp >= (now() - '7 days'::interval))",)
+   ('                                      Rows Removed by Filter: 766667',)
+   ('                                      Buffers: shared hit=13593 read=22184',)
+   ('                                      Worker 0:  actual time=108.181..147.327 rows=266274 loops=1',)
+   ('                                        Buffers: shared hit=4491 read=6519',)
+   ('                                      Worker 1:  actual time=108.205..147.667 rows=267381 loops=1',)
+   ('                                        Buffers: shared hit=4509 read=8160',)
+   ('Planning Time: 0.066 ms',)
+   ('Execution Time: 314.196 ms',)
+
+--- Measuring performance BEFORE indexing ---
+Building indexes from index_strategy.sql
+Indexes created
+
+--- Measuring performance AFTER indexing ---
+
+--- Final Performance Report ---
+
+Query: daily_active_users_last_7_days
+   - Avg BEFORE: 0.6637 sec
+   - Avg AFTER:  0.3325 sec
+   - Improvement: 49.91%
+   - Timing Before (Min/Max): 0.6557 / 0.6708 sec
+   - Timing After (Min/Max):  0.3286 / 0.3437 sec
+
+Query: top_10_content_last_24h
+   - Avg BEFORE: 0.1528 sec
+   - Avg AFTER:  0.0257 sec
+   - Improvement: 83.21%
+   - Timing Before (Min/Max): 0.1486 / 0.1603 sec
+   - Timing After (Min/Max):  0.0251 / 0.0260 sec
+
+Query: device_usage_last_month
+   - Avg BEFORE: 0.2357 sec
+   - Avg AFTER:  0.2324 sec
+   - Improvement: 1.42%
+   - Timing Before (Min/Max): 0.2300 / 0.2471 sec
+   - Timing After (Min/Max):  0.2255 / 0.2425 sec
+
+Query: content_performance_last_30_days
+   - Avg BEFORE: 0.1453 sec
+   - Avg AFTER:  0.1486 sec
+   - Improvement: -2.29%
+   - Timing Before (Min/Max): 0.1404 / 0.1491 sec
+   - Timing After (Min/Max):  0.1397 / 0.1586 sec
+
+Query: regional_analytics_last_30_days
+   - Avg BEFORE: 0.2295 sec
+   - Avg AFTER:  0.2358 sec
+   - Improvement: -2.76%
+   - Timing Before (Min/Max): 0.2196 / 0.2405 sec
+   - Timing After (Min/Max):  0.2251 / 0.2465 sec
+
+Query: most_engaged_users_last_7_days
+   - Avg BEFORE: 0.2469 sec
+   - Avg AFTER:  0.2069 sec
+   - Improvement: 16.18%
+   - Timing Before (Min/Max): 0.2399 / 0.2548 sec
+   - Timing After (Min/Max):  0.2048 / 0.2108 sec
+
+
