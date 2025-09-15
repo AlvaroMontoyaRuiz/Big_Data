@@ -89,7 +89,7 @@ def generate_viewing_events_generate_series(conn, num_days=90, events_per_day=10
                 (ARRAY['480p','720p','1080p','4K'])[FLOOR(random()*4 + 1)] AS quality,
                 ROUND((random() * 49 + 1)::numeric, 2) AS bandwidth_mbps
             FROM generate_series('{start_date}'::timestamp, '{end_date}'::timestamp, interval '1 day') AS gs(day),
-                 generate_series(1, {events_per_day}) AS gs2
+                    generate_series(1, {events_per_day}) AS gs2
         """)
         conn.commit()
         print("✓ All events generated")
@@ -101,39 +101,31 @@ def generate_viewing_events_generate_series(conn, num_days=90, events_per_day=10
 
 def create_indexes(conn):
     """
-    Creates the recommended indexes to optimize query performance
-    based on the provided analytics and best practices.
+    Reads and executes index creation statements from a separate SQL file.
     """
     cur = conn.cursor()
-    print("Creating indexes...")
+    print("Creating indexes from index_strategy.sql...")
     
-    # Use a BRIN index for the time-series data
-    # BRIN is extremely compact and efficient for naturally ordered data like timestamps.
-    cur.execute("CREATE INDEX IF NOT EXISTS idx_viewing_events_timestamp_brin ON viewing_events USING BRIN(event_timestamp);")
-    
-    # Composite B-Tree index for Daily Active Users and User Engagement metrics.
-    # This index supports queries that filter by timestamp and group/count by user.
-    cur.execute("CREATE INDEX IF NOT EXISTS idx_viewing_events_timestamp_user_id ON viewing_events (event_timestamp DESC, user_id);")
-
-    # Composite B-Tree index for Content Performance
-    # Optimizes queries that filter by time and group by content_id.
-    cur.execute("CREATE INDEX IF NOT EXISTS idx_viewing_events_timestamp_content_id ON viewing_events (event_timestamp DESC, content_id);")
-
-    # Composite B-Tree index for Regional Analytics
-    # Optimizes queries that filter by time and group by country_code.
-    cur.execute("CREATE INDEX IF NOT EXISTS idx_viewing_events_timestamp_country ON viewing_events (event_timestamp DESC, country_code);")
-
-    # Composite B-Tree for Device Analytics.
-    # The existing code noted low cardinality, but a composite index still helps
-    # to filter by time, which is the most selective column.
-    cur.execute("CREATE INDEX IF NOT EXISTS idx_viewing_events_timestamp_device ON viewing_events (event_timestamp DESC, device_type);")
-
-    # Run ANALYZE to update statistics for the query planner
-    cur.execute("ANALYZE viewing_events;")
-
-    conn.commit()
-    cur.close()
-    print("✓ Indexes created")
+    try:
+        with open('index_strategy.sql', 'r') as f:
+            sql_commands = f.read()
+        
+        # Split the commands by semicolon and execute each one
+        for command in sql_commands.split(';'):
+            command = command.strip()
+            if command:
+                cur.execute(command)
+        
+        conn.commit()
+        print("✓ Indexes created successfully")
+    except psycopg2.Error as e:
+        print(f"Error creating indexes: {e}", file=sys.stderr)
+        conn.rollback()
+    except FileNotFoundError:
+        print("Error: The file 'index_strategy.sql' was not found.", file=sys.stderr)
+        conn.rollback()
+    finally:
+        cur.close()
 
 def get_daily_active_users_query(days=7):
     """Returns the daily active users query for a specified number of days."""
